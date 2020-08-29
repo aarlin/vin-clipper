@@ -7,9 +7,13 @@ import 'package:http/http.dart' as http;
 import 'package:vin_clipper/MakeDialog.dart';
 import 'package:vin_clipper/ModelDialog.dart';
 import 'package:vin_clipper/VinInfo.dart';
+import 'package:vin_clipper/history_page.dart';
+import 'package:vin_clipper/settings_page.dart';
 import 'Makes.dart';
 import 'Models.dart';
 import 'package:barcode_scan/barcode_scan.dart';
+
+enum TabItem { history, scan, settings }
 
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
@@ -96,26 +100,179 @@ class _MyHomePageState extends State<MyHomePage> {
   ScanResult scanResult;
 
   int _selectedIndex = 0;
-  static const TextStyle optionStyle =
-      TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
-  static const List<Widget> _widgetOptions = <Widget>[
-    Text(
-      'Index 0: Home',
-      style: optionStyle,
-    ),
-    Text(
-      'Index 1: Business',
-      style: optionStyle,
-    ),
-    Text(
-      'Index 2: School',
-      style: optionStyle,
-    ),
-  ];
+  TabItem currentTab = TabItem.history;
+
+  PageController _pageController = PageController();
+  List<Widget> _screens = [HistoryPage(), MyHomePage(), SettingsPage()];
+
+  // AppFlow is just a class I created for holding information
+  // about our app's flows.
+  // final List<AppFlow> appFlows = [
+  //   AppFlow(
+  //     title: 'Video',
+  //     iconData: Icons.ondemand_video,
+  //     mainColor: Colors.red,
+  //     navigatorKey: GlobalKey<NavigatorState>(),
+  //   ),
+  //   AppFlow(
+  //     title: 'Music',
+  //     iconData: Icons.music_note,
+  //     mainColor: Colors.green,
+  //     navigatorKey: GlobalKey<NavigatorState>(),
+  //   )
+  // ];
+
+  AppBar createAppBar() {
+    return AppBar(
+      // Here we take the value from the MyHomePage object that was created by
+      // the App.build method, and use it to set our appbar title.
+      title: Text(widget.title),
+    );
+  }
+
+  void _onPageChanged(int index) {}
+
+  Center createVinScannerBody() {
+    return Center(
+      // Center is a layout widget. It takes a single child and positions it
+      // in the middle of the parent.
+      child: Column(
+        // Column is also a layout widget. It takes a list of children and
+        // arranges them vertically. By default, it sizes itself to fit its
+        // children horizontally, and tries to be as tall as its parent.
+        //
+        // Invoke "debug painting" (press "p" in the console, choose the
+        // "Toggle Debug Paint" action from the Flutter Inspector in Android
+        // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
+        // to see the wireframe for each widget.
+        //
+        // Column has various properties to control how it sizes itself and
+        // how it positions its children. Here we use mainAxisAlignment to
+        // center the children vertically; the main axis here is the vertical
+        // axis because Columns are vertical (the cross axis would be
+        // horizontal).
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          MaterialButton(onPressed: scan, child: new Text("Scan")),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: vinController,
+              keyboardType: TextInputType.text,
+              decoration: InputDecoration(hintText: "Enter a vin"),
+            ),
+          ),
+          RaisedButton(
+            child: Text("Get Vin Info"),
+            onPressed: () {
+              var vinText = vinController.text;
+              if (vinText.isNotEmpty) {
+                getVinInfo(vinText);
+              }
+            },
+          ),
+          Divider(
+            height: 3.0,
+          ),
+          RaisedButton(
+            child: Text(makeTitle),
+            onPressed: (this.makeStrings.length == 0)
+                ? null
+                : () {
+                    showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return MakeDialog(
+                            makeStrings: this.makeStrings,
+                            makeCallback: (value) {
+                              print("make chosen was $value");
+                              setState(() {
+                                makeTitle = value;
+                                fetchModels(http.Client(), makeTitle)
+                                    .then((models) {
+                                  setState(() {
+                                    List<ModelResults> modelResults =
+                                        models.results;
+                                    for (var model in modelResults) {
+                                      print("model is ${model.modelName}");
+                                      modelStrings.add(model.modelName);
+                                    }
+                                    modelStrings.sort();
+                                  });
+                                });
+                              });
+                            },
+                          );
+                        });
+                  },
+          ),
+          RaisedButton(
+            child: Text(modelTitle),
+            onPressed: (this.modelStrings.length == 0)
+                ? null
+                : () {
+                    showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return ModelDialog(
+                            modelStrings: this.modelStrings,
+                            modelCallback: (String model) {
+                              print("chosen model was $model");
+
+                              setState(() {
+                                modelTitle = model;
+                              });
+                            },
+                          );
+                        });
+                  },
+          ),
+        ],
+      ),
+    );
+  }
+
+  PageView createBody() {
+    return PageView(
+      controller: _pageController,
+      children: _screens,
+      onPageChanged: _onPageChanged,
+      physics: NeverScrollableScrollPhysics(),
+    );
+  }
+
+  BottomNavigationBar createBottomNavigationBar() {
+    return BottomNavigationBar(
+      items: const <BottomNavigationBarItem>[
+        BottomNavigationBarItem(
+          icon: Icon(Icons.history),
+          title: Text('History'),
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.directions_car),
+          title: Text('Scan VIN'),
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.settings),
+          title: Text('Settings'),
+        ),
+      ],
+      currentIndex: _selectedIndex,
+      selectedItemColor: Colors.amber[800],
+      onTap: _onItemTapped,
+    );
+  }
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      _pageController.jumpToPage(index);
+    });
+  }
+
+  void _selectTab(TabItem tabItem) {
+    setState(() {
+      currentTab = tabItem;
     });
   }
 
@@ -191,132 +348,11 @@ class _MyHomePageState extends State<MyHomePage> {
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            MaterialButton(onPressed: scan, child: new Text("Scan")),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(
-                controller: vinController,
-                keyboardType: TextInputType.text,
-                decoration: InputDecoration(hintText: "Enter a vin"),
-              ),
-            ),
-            RaisedButton(
-              child: Text("Get Vin Info"),
-              onPressed: () {
-                var vinText = vinController.text;
-                if (vinText.isNotEmpty) {
-                  getVinInfo(vinText);
-                }
-              },
-            ),
-            Divider(
-              height: 3.0,
-            ),
-            RaisedButton(
-              child: Text(makeTitle),
-              onPressed: (this.makeStrings.length == 0)
-                  ? null
-                  : () {
-                      showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return MakeDialog(
-                              makeStrings: this.makeStrings,
-                              makeCallback: (value) {
-                                print("make chosen was $value");
-                                setState(() {
-                                  makeTitle = value;
-                                  fetchModels(http.Client(), makeTitle)
-                                      .then((models) {
-                                    setState(() {
-                                      List<ModelResults> modelResults =
-                                          models.results;
-                                      for (var model in modelResults) {
-                                        print("model is ${model.modelName}");
-                                        modelStrings.add(model.modelName);
-                                      }
-                                      modelStrings.sort();
-                                    });
-                                  });
-                                });
-                              },
-                            );
-                          });
-                    },
-            ),
-            RaisedButton(
-              child: Text(modelTitle),
-              onPressed: (this.modelStrings.length == 0)
-                  ? null
-                  : () {
-                      showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return ModelDialog(
-                              modelStrings: this.modelStrings,
-                              modelCallback: (String model) {
-                                print("chosen model was $model");
-
-                                setState(() {
-                                  modelTitle = model;
-                                });
-                              },
-                            );
-                          });
-                    },
-            ),
-            Center(
-              child: _widgetOptions.elementAt(_selectedIndex)
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            title: Text('Home'),
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.business),
-            title: Text('Business'),
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.school),
-            title: Text('School'),
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.amber[800],
-        onTap: _onItemTapped,
-      ),
-      // This trailing comma makes auto-formatting nicer for build methods.
-    );
+        appBar: createAppBar(),
+        body: createBody(),
+        bottomNavigationBar: createBottomNavigationBar()
+        // This trailing comma makes auto-formatting nicer for build methods.
+        );
   }
 }
 
