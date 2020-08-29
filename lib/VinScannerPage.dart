@@ -7,16 +7,16 @@ import 'package:http/http.dart' as http;
 import 'package:vin_clipper/MakeDialog.dart';
 import 'package:vin_clipper/ModelDialog.dart';
 import 'package:vin_clipper/VinInfo.dart';
-import 'package:vin_clipper/history_page.dart';
-import 'package:vin_clipper/settings_page.dart';
+import 'package:vin_clipper/HistoryPage.dart';
+import 'package:vin_clipper/SettingsPage.dart';
 import 'Makes.dart';
 import 'Models.dart';
 import 'package:barcode_scan/barcode_scan.dart';
 
 enum TabItem { history, scan, settings }
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
+class VinScannerPage extends StatefulWidget {
+  VinScannerPage({Key key, this.title}) : super(key: key);
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -30,7 +30,7 @@ class MyHomePage extends StatefulWidget {
   final String title;
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  _VinScannerPageState createState() => _VinScannerPageState();
 }
 
 //Makes
@@ -90,7 +90,7 @@ VinInfo parseVinInfo(String responseBody) {
   return VinInfo.fromJson(parsed);
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _VinScannerPageState extends State<VinScannerPage> {
   TextEditingController vinController = TextEditingController();
   List<String> makeStrings = List<String>();
   List<String> modelStrings = List<String>();
@@ -98,39 +98,6 @@ class _MyHomePageState extends State<MyHomePage> {
   String modelTitle = "Choose Model";
   String barcode = "";
   ScanResult scanResult;
-
-  int _selectedIndex = 0;
-  TabItem currentTab = TabItem.history;
-
-  PageController _pageController = PageController();
-  List<Widget> _screens = [HistoryPage(), MyHomePage(), SettingsPage()];
-
-  // AppFlow is just a class I created for holding information
-  // about our app's flows.
-  // final List<AppFlow> appFlows = [
-  //   AppFlow(
-  //     title: 'Video',
-  //     iconData: Icons.ondemand_video,
-  //     mainColor: Colors.red,
-  //     navigatorKey: GlobalKey<NavigatorState>(),
-  //   ),
-  //   AppFlow(
-  //     title: 'Music',
-  //     iconData: Icons.music_note,
-  //     mainColor: Colors.green,
-  //     navigatorKey: GlobalKey<NavigatorState>(),
-  //   )
-  // ];
-
-  AppBar createAppBar() {
-    return AppBar(
-      // Here we take the value from the MyHomePage object that was created by
-      // the App.build method, and use it to set our appbar title.
-      title: Text(widget.title),
-    );
-  }
-
-  void _onPageChanged(int index) {}
 
   Center createVinScannerBody() {
     return Center(
@@ -232,50 +199,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  PageView createBody() {
-    return PageView(
-      controller: _pageController,
-      children: _screens,
-      onPageChanged: _onPageChanged,
-      physics: NeverScrollableScrollPhysics(),
-    );
-  }
-
-  BottomNavigationBar createBottomNavigationBar() {
-    return BottomNavigationBar(
-      items: const <BottomNavigationBarItem>[
-        BottomNavigationBarItem(
-          icon: Icon(Icons.history),
-          title: Text('History'),
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.directions_car),
-          title: Text('Scan VIN'),
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
-          title: Text('Settings'),
-        ),
-      ],
-      currentIndex: _selectedIndex,
-      selectedItemColor: Colors.amber[800],
-      onTap: _onItemTapped,
-    );
-  }
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-      _pageController.jumpToPage(index);
-    });
-  }
-
-  void _selectTab(TabItem tabItem) {
-    setState(() {
-      currentTab = tabItem;
-    });
-  }
-
   Future scan() async {
     try {
       scanResult = await BarcodeScanner.scan();
@@ -348,11 +271,9 @@ class _MyHomePageState extends State<MyHomePage> {
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return Scaffold(
-        appBar: createAppBar(),
-        body: createBody(),
-        bottomNavigationBar: createBottomNavigationBar()
-        // This trailing comma makes auto-formatting nicer for build methods.
-        );
+      body: createVinScannerBody(),
+      // This trailing comma makes auto-formatting nicer for build methods.
+    );
   }
 }
 
