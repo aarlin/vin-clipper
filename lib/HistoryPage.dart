@@ -36,6 +36,23 @@ class _HistoryPageState extends State<HistoryPage> {
         });
   }
 
+   void _showSnackBar(String pin) {
+    final snackBar = SnackBar(
+      duration: Duration(seconds: 3),
+      content: Container(
+          height: 80.0,
+          child: Center(
+            child: Text(
+              'Pin Submitted. Value: $pin',
+              style: TextStyle(fontSize: 25.0),
+            ),
+          )),
+      backgroundColor: Colors.deepPurpleAccent,
+    );
+    // Scaffold.of(_context).hideCurrentSnackBar();
+    // Scaffold.of(_context).showSnackBar(snackBar);
+  }
+
   Widget _buildRow(WordPair pair) {
     final alreadyCopied = _saved.contains(pair);
     return ListTile(
@@ -52,6 +69,7 @@ class _HistoryPageState extends State<HistoryPage> {
             if (!alreadyCopied) {
               _saved.clear();
               _saved.add(pair);
+              _showSnackBar(pair.toString());
             }
           });
         });
