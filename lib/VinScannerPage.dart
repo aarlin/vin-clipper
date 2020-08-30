@@ -1,15 +1,14 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:vin_clipper/VinInfo.dart';
 import 'Makes.dart';
-import 'Models.dart';
 import 'package:barcode_scan/barcode_scan.dart';
 import 'package:vin_clipper/VinList.dart';
 import 'package:vin_clipper/CardFactory.dart';
+import 'package:vin_clipper/ApiController.dart';
 
 enum TabItem { history, scan, settings }
 
@@ -22,63 +21,6 @@ class VinScannerPage extends StatefulWidget {
   _VinScannerPageState createState() => _VinScannerPageState();
 }
 
-//Makes
-
-Future<Makes> fetchMakes(http.Client client) async {
-  final response = await client.get(
-      'https://vpic.nhtsa.dot.gov/api/vehicles/GetMakesForVehicleType/car?format=json');
-
-  // Use the compute function to run parsePhotos in a separate isolate.
-  return compute(parseMakes, response.body);
-}
-
-// A function that converts a response body into a List<Photo>.
-Makes parseMakes(String responseBody) {
-  final parsed = jsonDecode(responseBody);
-
-  return Makes.fromJson(parsed);
-}
-
-//Models
-
-Future<Models> fetchModels(http.Client client, String make) async {
-  final response = await client.get(
-      'https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMake/' +
-          make +
-          '?format=json');
-
-  // Use the compute function to run parsePhotos in a separate isolate.
-  return compute(parseModels, response.body);
-}
-
-// A function that converts a response body into a List<Photo>.
-
-Models parseModels(String responseBody) {
-  final parsed = jsonDecode(responseBody);
-
-  return Models.fromJson(parsed);
-}
-
-//Models
-
-Future<VinInfo> fetchVinInfo(http.Client client, String vin) async {
-  final response = await client.get(
-      'https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvaluesextended/' +
-          vin +
-          '?format=json');
-
-  // Use the compute function to run parsePhotos in a separate isolate.
-  return compute(parseVinInfo, response.body);
-}
-
-// A function that converts a response body into a List<Photo>.
-
-VinInfo parseVinInfo(String responseBody) {
-  final parsed = jsonDecode(responseBody);
-
-  return VinInfo.fromJson(parsed);
-}
-
 class _VinScannerPageState extends State<VinScannerPage> {
   final TextEditingController _pinPutController = TextEditingController();
 
@@ -88,6 +30,30 @@ class _VinScannerPageState extends State<VinScannerPage> {
   String modelTitle = "Choose Model";
   String barcode = "";
   ScanResult scanResult;
+
+  Future<void> getVinInfo(String vinText) {
+    ApiController.fetchVinInfo(http.Client(), vinText).then((VinInfo vinInfo) {
+      List<VinResults> vinResults = vinInfo.results;
+
+//                   for(var vinResult in vinResults  ){
+//                    this.makeTitle = vinResult.make;
+//                    this.modelTitle = vinResult.model;
+//                   }
+      //example vin : 3LN6L2JKXFR605807
+      print("vin results length is ${vinResults.length}");
+      setState(() {
+        if (vinResults.length > 0) {
+          VinResults result = vinResults[0];
+          print(result);
+          this.makeTitle = result.make;
+          this.modelTitle = result.model;
+          print("this make is $makeTitle. this model is $modelTitle");
+          this.modelStrings.add(this.modelTitle);
+        }
+      });
+    });
+    return null;
+  }
 
   Center createVinScannerBody() {
     return Center(
@@ -131,7 +97,9 @@ class _VinScannerPageState extends State<VinScannerPage> {
       barcode = scanResult.rawContent;
       setState(() => this.barcode = barcode);
       print("barcode is $barcode");
-      getVinInfo(barcode);
+      if (barcode?.isNotEmpty ?? false) {
+        getVinInfo(barcode);
+      }
     } on PlatformException catch (e) {
       if (e.code == BarcodeScanner.cameraAccessDenied) {
         setState(() {
@@ -153,7 +121,7 @@ class _VinScannerPageState extends State<VinScannerPage> {
     // TODO: implement initState
     super.initState();
 
-    fetchMakes(http.Client()).then((value) {
+    ApiController.fetchMakes(http.Client()).then((value) {
       setState(() {
         List<Results> results = value.results;
         for (var i in results) {
@@ -163,30 +131,6 @@ class _VinScannerPageState extends State<VinScannerPage> {
         makeStrings.sort();
       });
     });
-  }
-
-  Future<void> getVinInfo(String vinText) {
-    fetchVinInfo(http.Client(), vinText).then((VinInfo vinInfo) {
-      List<VinResults> vinResults = vinInfo.results;
-
-//                   for(var vinResult in vinResults  ){
-//                    this.makeTitle = vinResult.make;
-//                    this.modelTitle = vinResult.model;
-//                   }
-      //example vin : 3LN6L2JKXFR605807
-      print("vin results length is ${vinResults.length}");
-      setState(() {
-        if (vinResults.length > 0) {
-          VinResults result = vinResults[0];
-          print(result);
-          this.makeTitle = result.make;
-          this.modelTitle = result.model;
-          print("this make is $makeTitle. this model is $modelTitle");
-          this.modelStrings.add(this.modelTitle);
-        }
-      });
-    });
-    return null;
   }
 
   @override
