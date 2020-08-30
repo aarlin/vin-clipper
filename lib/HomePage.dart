@@ -14,9 +14,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0;
-
-  PageController _pageController = PageController();
+  int _selectedIndex = 1;
+  PageController _pageController = PageController(initialPage: 1);
   List<Widget> _screens = [HistoryPage(), VinScannerPage(), SettingsPage()];
 
   AppBar createAppBar() {
@@ -80,8 +79,8 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: createBody(), bottomNavigationBar: createBottomNavigationBar());
+      body: createBody(),
+      bottomNavigationBar: createBottomNavigationBar()
+    );
   }
 }
-
-class CameraAccessDenied {}
