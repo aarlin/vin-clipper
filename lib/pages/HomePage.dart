@@ -1,8 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:vin_clipper/HistoryPage.dart';
-import 'package:vin_clipper/SettingsPage.dart';
-import 'package:vin_clipper/VinScannerPage.dart';
+import 'package:vin_clipper/pages/HistoryPage.dart';
+import 'package:vin_clipper/pages/SettingsPage.dart';
+import 'package:vin_clipper/pages/VinScannerPage.dart';
+import 'package:vin_clipper/repository/DataRespository.dart';
 
 class HomePage extends StatefulWidget {
   HomePage({Key key, this.title}) : super(key: key);
@@ -17,6 +18,7 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 1;
   PageController _pageController = PageController(initialPage: 1);
   List<Widget> _screens = [HistoryPage(), VinScannerPage(), SettingsPage()];
+  final DataRepository repository = DataRepository();
 
   AppBar createAppBar() {
     return AppBar(
@@ -79,8 +81,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: createBody(),
-      bottomNavigationBar: createBottomNavigationBar()
-    );
+        body: createBody(), bottomNavigationBar: createBottomNavigationBar());
   }
 }

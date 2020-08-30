@@ -1,10 +1,11 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:vin_clipper/VinInfo.dart';
-import 'Makes.dart';
+import '../Makes.dart';
 import 'package:barcode_scan/barcode_scan.dart';
 import 'package:vin_clipper/VinList.dart';
 import 'package:vin_clipper/CardFactory.dart';
@@ -23,23 +24,20 @@ class VinScannerPage extends StatefulWidget {
 
 class _VinScannerPageState extends State<VinScannerPage> {
   final TextEditingController _pinPutController = TextEditingController();
+  final _firestoreRef = FirebaseFirestore.instance.collection('vehicles');
 
   List<String> makeStrings = List<String>();
   List<String> modelStrings = List<String>();
   String makeTitle = "Choose Make";
   String modelTitle = "Choose Model";
   String barcode = "";
+  String modelYear;
   ScanResult scanResult;
 
   Future<void> getVinInfo(String vinText) {
     ApiController.fetchVinInfo(http.Client(), vinText).then((VinInfo vinInfo) {
       List<VinResults> vinResults = vinInfo.results;
 
-//                   for(var vinResult in vinResults  ){
-//                    this.makeTitle = vinResult.make;
-//                    this.modelTitle = vinResult.model;
-//                   }
-      //example vin : 3LN6L2JKXFR605807
       print("vin results length is ${vinResults.length}");
       setState(() {
         if (vinResults.length > 0) {
@@ -47,12 +45,24 @@ class _VinScannerPageState extends State<VinScannerPage> {
           print(result);
           this.makeTitle = result.make;
           this.modelTitle = result.model;
+          this.modelYear = result.modelYear;
+          storeVehicleInformation();
           print("this make is $makeTitle. this model is $modelTitle");
           this.modelStrings.add(this.modelTitle);
         }
       });
     });
     return null;
+  }
+
+  void storeVehicleInformation() {
+    _firestoreRef.add({
+      "vin": barcode,
+      "timestamp": DateTime.now().millisecondsSinceEpoch,
+      "make": this.makeTitle,
+      "model": this.modelTitle,
+      "year": this.modelYear
+    });
   }
 
   Center createVinScannerBody() {
